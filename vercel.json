@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/grind--v1.0.html" }
+    { "source": "/", "destination": "/grind-v1.0.html" }
   ]
 }
