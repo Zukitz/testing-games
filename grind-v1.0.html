@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRIND — A Life RPG</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #181818;
+    --border: #2a2a2a;
+    --text: #e8e4dc;
+    --muted: #6b6660;
+    --accent: #d4a84b;
+    --accent2: #4b8fd4;
+    --danger: #d44b4b;
+    --success: #4bd47a;
+    --warn: #d4914b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; font-size: 14px; line-height: 1.6; min-height: 100vh; }
+  #app { max-width: 860px; margin: 0 auto; padding: 20px; }
+  .game-title { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .game-subtitle { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; margin-bottom: 24px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 16px; margin-bottom: 12px; }
+  .panel-label { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+  .hud { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
+  .stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; }
+  .stat-name { font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px; }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--accent); }
+  .stat-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .stat-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+  .money-hud { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
+  .money-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; }
+  .money-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+  .money-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .money-green { color: var(--success); }
+  .money-gold { color: var(--accent); }
+  .money-blue { color: var(--accent2); }
+  #log { background: #080808; border: 1px solid var(--border); border-radius: 4px; padding: 14px; height: 220px; overflow-y: auto; margin-bottom: 12px; font-size: 13px; }
+  #log::-webkit-scrollbar { width: 4px; }
+  #log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .log-line { margin-bottom: 6px; line-height: 1.5; }
+  .log-line::before { content: '> '; color: var(--muted); }
+  .log-event { color: var(--text); }
+  .log-good { color: var(--success); }
+  .log-bad { color: var(--danger); }
+  .log-gold { color: var(--accent); }
+  .log-info { color: var(--accent2); }
+  .log-warn { color: var(--warn); }
+  .log-week { color: var(--muted); font-style: italic; }
+  .actions-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 12px; }
+  .action-btn-promo { grid-column: 1 / -1; }
+  .action-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 12px; cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s; position: relative; width: 100%; }
+  .action-btn:hover:not(:disabled) { border-color: var(--accent); background: #1a1a1a; }
+  .action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .action-btn.special { border-color: var(--warn); }
+  .action-btn.special .btn-title { color: var(--warn); }
+  .action-btn.promo-btn { border-color: var(--accent2); }
+  .action-btn.promo-btn .btn-title { color: var(--accent2); }
+  .btn-title { font-weight: 700; color: var(--accent); margin-bottom: 2px; font-size: 11px; letter-spacing: 0.05em; }
+  .btn-desc { color: var(--muted); font-size: 11px; }
+  .btn-cost { position: absolute; top: 10px; right: 12px; font-size: 10px; color: var(--warn); }
+  .btn-badge { position: absolute; top: 10px; right: 12px; font-size: 9px; background: var(--warn); color: #000; padding: 1px 6px; border-radius: 2px; font-weight: 700; }
+  #advance-btn { width: 100%; background: var(--accent); border: none; border-radius: 4px; padding: 14px; color: #0a0a0a; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s, transform 0.1s; margin-bottom: 12px; }
+  #advance-btn:hover { opacity: 0.88; }
+  #advance-btn:active { transform: scale(0.99); }
+  #char-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .char-box { background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 28px; max-width: 520px; width: 100%; }
+  .char-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: var(--accent); margin-bottom: 6px; }
+  .char-sub { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+  .char-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px; margin-bottom: 14px; outline: none; }
+  .char-input:focus { border-color: var(--accent); }
+  .origin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+  .origin-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 12px; cursor: pointer; transition: border-color 0.15s; }
+  .origin-card:hover, .origin-card.selected { border-color: var(--accent); }
+  .origin-card.selected { background: #1e1a12; }
+  .origin-name { font-weight: 700; font-size: 12px; color: var(--accent); margin-bottom: 3px; }
+  .origin-desc { font-size: 11px; color: var(--muted); }
+  .start-btn { width: 100%; background: var(--accent); border: none; border-radius: 4px; padding: 13px; color: #0a0a0a; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; }
+  .start-btn:hover { opacity: 0.88; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 22px; max-width: 480px; width: 100%; max-height: 82vh; overflow-y: auto; }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 14px; }
+  .invest-row { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 10px 0; gap: 10px; }
+  .invest-info .inv-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+  .invest-info .inv-desc { font-size: 11px; color: var(--muted); }
+  .inv-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); font-family: 'Space Mono', monospace; font-size: 11px; padding: 6px 12px; border-radius: 3px; cursor: pointer; white-space: nowrap; }
+  .inv-btn:hover { background: var(--accent); color: #0a0a0a; }
+  .inv-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .amount-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 5px 8px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 12px; width: 90px; outline: none; }
+  .amount-input:focus { border-color: var(--accent); }
+  .modal-close { margin-top: 14px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: 'Space Mono', monospace; font-size: 11px; padding: 8px 16px; border-radius: 3px; cursor: pointer; width: 100%; }
+  .modal-close:hover { border-color: var(--text); color: var(--text); }
+  .choice-btn { width: 100%; margin-top: 10px; padding: 12px; border-radius: 4px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; border: none; letter-spacing: 0.1em; }
+  .choice-stay { background: var(--accent2); color: #0a0a0a; }
+  .choice-leave { background: var(--accent); color: #0a0a0a; }
+  .choice-btn:hover { opacity: 0.85; }
+  .portfolio-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); gap: 8px; }
+  .portfolio-row:last-child { border-bottom: none; }
+  .port-name { color: var(--muted); flex: 1; }
+  .port-val { color: var(--success); font-weight: 700; }
+  .port-withdraw { background: transparent; border: 1px solid var(--danger); color: var(--danger); font-family: 'Space Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 3px; cursor: pointer; white-space: nowrap; }
+  .port-withdraw:hover { background: var(--danger); color: #0a0a0a; }
+  .career-badge { display: inline-block; background: var(--surface2); border: 1px solid var(--accent); border-radius: 3px; padding: 3px 10px; font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; }
+  .time-strip { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; font-size: 11px; color: var(--muted); }
+  .time-strip span { color: var(--text); font-weight: 700; }
+  .hidden { display: none !important; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  /* Negative cash display */
+  .money-val.in-debt { color: var(--danger) !important; }
+  /* Restart button */
+  #restart-btn { background: transparent; border: 1px solid var(--danger); color: var(--danger); font-family: 'Space Mono', monospace; font-size: 11px; padding: 7px 16px; border-radius: 3px; cursor: pointer; letter-spacing: 0.1em; }
+  #restart-btn:hover { background: var(--danger); color: #0a0a0a; }
+  /* Ad slots */
+  .ad-slot { width: 100%; background: var(--surface2); border: 1px dashed var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; overflow: hidden; margin-bottom: 12px; }
+  .ad-slot-leaderboard { height: 90px; }   /* 728×90 leaderboard — collapses to full width */
+  .ad-slot-rectangle  { height: 250px; }   /* 300×250 medium rectangle */
+</style>
+</head>
+<body>
+
+<!-- CHARACTER CREATION -->
+<div id="char-screen">
+  <div class="char-box">
+    <div class="char-title">GRIND</div>
+    <div class="char-sub">A text-based life RPG. Modern day. No shortcuts.</div>
+    <div class="panel-label" style="margin-bottom:8px;">Your name</div>
+    <input class="char-input" id="name-input" type="text" placeholder="Enter your name..." maxlength="24"/>
+    <div class="panel-label" style="margin-bottom:8px;">Your origin</div>
+    <div class="origin-grid">
+      <div class="origin-card" data-origin="broke"><div class="origin-name">Dead Broke</div><div class="origin-desc">$0 cash. High Hustle. Nothing to lose.</div></div>
+      <div class="origin-card" data-origin="dropout"><div class="origin-name">College Dropout</div><div class="origin-desc">$800, student debt. High Intelligence.</div></div>
+      <div class="origin-card" data-origin="immigrant"><div class="origin-name">New in Town</div><div class="origin-desc">$300 cash. High Charisma. Left it all behind.</div></div>
+      <div class="origin-card" data-origin="layoff"><div class="origin-name">Laid Off</div><div class="origin-desc">$2,000 severance. Balanced stats.</div></div>
+    </div>
+    <button class="start-btn" onclick="startGame()">BEGIN YOUR GRIND</button>
+  </div>
+</div>
+
+<!-- INVEST MODAL -->
+<div class="modal-overlay hidden" id="invest-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="invest-modal-title">INVESTMENTS</div>
+    <div id="invest-list"></div>
+    <button class="modal-close" onclick="closeInvest()">CLOSE</button>
+  </div>
+</div>
+
+<!-- RESTART CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="restart-modal">
+  <div class="modal-box" style="max-width:340px;">
+    <div class="modal-title">RESTART GAME?</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.7;">All progress will be permanently lost. This cannot be undone.</p>
+    <button class="choice-btn choice-leave" style="margin-top:16px;" onclick="confirmRestart()">YES — START OVER</button>
+    <button class="choice-btn choice-stay" style="margin-top:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);" onclick="document.getElementById('restart-modal').classList.add('hidden')">CANCEL</button>
+  </div>
+</div>
+
+<!-- FOUNDER CHOICE MODAL -->
+<div class="modal-overlay hidden" id="founder-modal">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-title">YOU'VE REACHED THE TOP</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.7;">You've climbed as high as any employee can go. The view is good — but you've seen how the owners live.<br><br>Do you stay and collect the paycheck, or walk out and build something of your own?</p>
+    <button class="choice-btn choice-stay" onclick="stayAtTop()">STAY — SECURE THE SALARY</button>
+    <button class="choice-btn choice-leave" onclick="goFounder()">LEAVE — BUILD MY OWN COMPANY</button>
+  </div>
+</div>
+
+<!-- MAIN GAME -->
+<div id="app">
+
+  <!-- ═══ AD SLOT — BANNER TOP (728×90) ══════════════════════════════════
+       Propeller Ads — Top Banner
+       HOW TO ACTIVATE:
+         1. Sign up at https://propellerads.com (free, no traffic minimum)
+         2. Go to Sites → Add Site → enter your domain
+         3. Create an ad zone: Display Banner → 728x90 (or Responsive)
+         4. Copy the zone script tag they provide
+         5. Replace the placeholder <div> below with that script tag
+  ════════════════════════════════════════════════════════════════════════ -->
+  <!-- PROPELLER ADS PLACEHOLDER — TOP BANNER -->
+  <div class="ad-slot ad-slot-leaderboard" id="ad-top">
+    <!-- paste your Propeller Ads top banner zone script here -->
+    Advertisement
+  </div>
+
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;">
+    <div>
+      <div class="game-title">Text-Based Life RPG</div>
+      <div class="game-subtitle" style="margin-bottom:0;">GRIND</div>
+    </div>
+    <button id="restart-btn" onclick="restartGame()">↺ RESTART</button>
+  </div>
+  <div style="margin-bottom:24px;"></div>
+
+  <div class="time-strip">Week <span id="hud-week">1</span> &nbsp;|&nbsp; Age <span id="hud-age">22</span> &nbsp;|&nbsp; <span id="hud-career" class="career-badge">Unemployed</span></div>
+  <div class="money-hud">
+    <div class="money-card"><div class="money-label">Cash</div><div class="money-val money-gold" id="hud-cash">$0</div></div>
+    <div class="money-card"><div class="money-label">Weekly Income</div><div class="money-val money-green" id="hud-income">$0/wk</div></div>
+    <div class="money-card"><div class="money-label">Investments</div><div class="money-val money-blue" id="hud-invest">$0</div></div>
+  </div>
+  <div class="hud">
+    <div class="stat-card"><div class="stat-name">Hustle</div><div class="stat-val" id="stat-hustle">0</div><div class="stat-bar"><div class="stat-fill" id="bar-hustle" style="width:0%"></div></div></div>
+    <div class="stat-card"><div class="stat-name">Intelligence</div><div class="stat-val" id="stat-intel">0</div><div class="stat-bar"><div class="stat-fill" id="bar-intel" style="width:0%;background:var(--accent2)"></div></div></div>
+    <div class="stat-card"><div class="stat-name">Charisma</div><div class="stat-val" id="stat-charm">0</div><div class="stat-bar"><div class="stat-fill" id="bar-charm" style="width:0%;background:var(--success)"></div></div></div>
+    <div class="stat-card"><div class="stat-name">Luck</div><div class="stat-val" id="stat-luck">0</div><div class="stat-bar"><div class="stat-fill" id="bar-luck" style="width:0%;background:var(--warn)"></div></div></div>
+  </div>
+  <div class="panel-label">— LIFE LOG —</div>
+  <div id="log"></div>
+
+  <!-- ═══ AD SLOT — RECTANGLE MID (300×250) ═══════════════════════════════
+       Propeller Ads — Mid Rectangle
+       Create a 300×250 Display Banner zone in your Propeller Ads dashboard
+       and paste the zone script here in place of the placeholder div.
+  ════════════════════════════════════════════════════════════════════════ -->
+  <div class="ad-slot ad-slot-rectangle" id="ad-mid">
+    <!-- paste your Propeller Ads mid rectangle zone script here -->
+    Advertisement
+  </div>
+
+  <button id="advance-btn" onclick="advanceWeek()">▶ ADVANCE WEEK</button>
+  <div class="panel-label">— THIS WEEK'S ACTIONS —</div>
+  <div class="actions-grid" id="actions-grid"></div>
+  <div class="panel hidden" id="portfolio-panel">
+    <div class="panel-label">— PORTFOLIO —</div>
+    <div id="portfolio-list"></div>
+  </div>
+
+  <!-- ═══ AD SLOT — BANNER BOTTOM (728×90) ════════════════════════════════
+       Propeller Ads — Bottom Banner
+       HOW TO ACTIVATE:
+         1. Sign up at https://propellerads.com (free, no traffic minimum)
+         2. Go to Sites → Add Site → enter your domain
+         3. Create an ad zone: Display Banner → 728x90 (or Responsive)
+         4. Copy the zone script tag they provide
+         5. Replace the placeholder <div> below with that script tag
+  ════════════════════════════════════════════════════════════════════════ -->
+  <div class="ad-slot ad-slot-leaderboard" id="ad-bottom">
+    <!-- paste your Propeller Ads bottom banner zone script here -->
+    Advertisement
+  </div>
+
+</div>
+
+<script>
+// ─── GAME STATE ───────────────────────────────────────────────────────────────
+let G = {};
+
+const ORIGINS = {
+  broke:     { cash: 0,    stats: { hustle: 30, intel: 10, charm: 10, luck: 10 }, desc: 'Dead Broke' },
+  dropout:   { cash: 800,  stats: { hustle: 0,  intel: 35, charm: 10, luck: 10 }, desc: 'College Dropout' },
+  immigrant: { cash: 300,  stats: { hustle: 10, intel: 10, charm: 35, luck: 10 }, desc: 'New in Town' },
+  layoff:    { cash: 2000, stats: { hustle: 0,  intel: 15, charm: 15, luck: 15 }, desc: 'Laid Off' },
+};
+
+const CAREERS = [
+  { id: 'unemployed', title: 'Unemployed',           income: 0,    req: {} },
+  { id: 'gig',        title: 'Gig Worker',            income: 280,  req: { hustle: 20 } },
+  { id: 'retail',     title: 'Retail Associate',      income: 420,  req: { charm: 30 } },
+  { id: 'trade',      title: 'Skilled Tradesperson',  income: 820,  req: { hustle: 55, intel: 40 } },
+  { id: 'analyst',    title: 'Financial Analyst',     income: 1400, req: { intel: 65, charm: 50 } },
+  { id: 'manager',    title: 'Department Manager',    income: 2100, req: { charm: 70, intel: 60, hustle: 60 } },
+  { id: 'director',   title: 'Director',              income: 3800, req: { intel: 80, charm: 80 } },
+  { id: 'executive',  title: 'C-Suite Executive',     income: 7500, req: { intel: 90, charm: 90, hustle: 75 } },
+];
+
+const FOUNDER_CAREER = { id: 'founder', title: 'Startup Founder', income: 0 };
+
+const INVESTMENTS = [
+  { id: 'savings',     name: 'High-Yield Savings',  desc: 'Safe. ~0.5%/wk.',             minCash: 100,  weeklyRate: 0.005,  risk: 0    },
+  { id: 'index',       name: 'Index Fund (S&P)',     desc: 'Solid. ~1.2%/wk avg.',        minCash: 500,  weeklyRate: 0.012,  risk: 0.15 },
+  { id: 'crypto',      name: 'Crypto (BTC/ETH)',     desc: 'Volatile. High risk/reward.', minCash: 200,  weeklyRate: 0.04,   risk: 0.6  },
+  { id: 'realestate',  name: 'Real Estate REIT',     desc: 'Stable. ~1.8%/wk.',          minCash: 5000, weeklyRate: 0.018,  risk: 0.1  },
+  { id: 'biz',         name: 'Side Business',        desc: 'Scales with Hustle stat.',    minCash: 1000, weeklyRate: 0,      risk: 0.25 },
+];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function log(msg, type='event') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = `log-line log-${type}`;
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function spend(amount) {
+  // Cash can go negative — no hard block. Bank loan fires at -15000.
+  G.cash -= amount;
+  checkBankLoan();
+  return true;
+}
+function checkBankLoan() {
+  if (G.cash <= -15000 && !G.loanActive) {
+    const loanAmt = Math.abs(G.cash); // bring back to 0
+    const repayment = Math.ceil(loanAmt * 1.5);
+    const weeklyRepay = Math.ceil(repayment / 12); // spread over 12 weeks
+    G.cash += loanAmt;
+    G.loanActive = { remaining: repayment, weeklyRepay };
+    log(`BANK LOAN ISSUED: ${fmt(loanAmt)} deposited to cover debt. Total repayment: ${fmt(repayment)} (50% interest) at ${fmt(weeklyRepay)}/week over 12 weeks.`, 'warn');
+  }
+}
+function getLivingExpense() {
+  // Scales with income: higher earners have higher baseline costs
+  const income = currentCareer().income;
+  if      (income === 0)    return { min: 80,  max: 120  };
+  else if (income < 500)    return { min: 100, max: 160  };
+  else if (income < 1000)   return { min: 150, max: 240  };
+  else if (income < 2500)   return { min: 250, max: 400  };
+  else if (income < 5000)   return { min: 400, max: 700  };
+  else                      return { min: 600, max: 1200 };
+}
+function restartGame() {
+  document.getElementById('restart-modal').classList.remove('hidden');
+}
+function confirmRestart() {
+  document.getElementById('restart-modal').classList.add('hidden');
+  document.getElementById('founder-modal').classList.add('hidden');
+  document.getElementById('invest-modal').classList.add('hidden');
+  document.getElementById('portfolio-panel').classList.add('hidden');
+  document.getElementById('actions-grid').innerHTML = '';
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('name-input').value = '';
+  document.querySelectorAll('.origin-card').forEach(c => c.classList.remove('selected'));
+  selectedOrigin = null;
+  G = {};
+  document.getElementById('char-screen').classList.remove('hidden');
+}
+function gainStat(stat, amount) {
+  G.stats[stat] = Math.min(100, G.stats[stat] + amount);
+}
+function fmt(n) {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 1000000) return sign + '$' + (abs/1000000).toFixed(2) + 'M';
+  if (abs >= 1000)    return sign + '$' + (abs/1000).toFixed(1) + 'k';
+  return sign + '$' + Math.floor(abs);
+}
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function currentCareer() {
+  return G.isFounder ? FOUNDER_CAREER : CAREERS[G.careerIdx];
+}
+
+// ─── ACTION POOL ─────────────────────────────────────────────────────────────
+function buildActionPool() {
+  const s = G.stats;
+  const intel = s.intel;
+
+  // Odd task scales with Intelligence tier
+  function oddTask() {
+    if (intel < 35) return {
+      id: 'odd_task', title: 'PICK UP ODD JOBS',
+      desc: 'Manual work. +$80–180 cash, +1 Hustle.',
+      fn: () => { const e=Math.floor(Math.random()*100)+80; G.cash+=e; gainStat('hustle',1); log(`Manual work completed. Earned $${e}. Physically demanding but paid.`,'good'); }
+    };
+    if (intel < 65) return {
+      id: 'odd_task', title: 'TAKE ON CONTRACT WORK',
+      desc: 'Skilled contract. +$200–400 cash, +1 Intel.',
+      fn: () => { const e=Math.floor(Math.random()*200)+200; G.cash+=e; gainStat('intel',1); log(`Contract delivered and invoiced. Payment received: $${e}.`,'good'); }
+    };
+    return {
+      id: 'odd_task', title: 'CONSULTING PROJECT',
+      desc: 'High-value consulting. +$500–1200 cash.',
+      fn: () => { const e=Math.floor(Math.random()*700)+500; G.cash+=e; gainStat('intel',1); log(`Consulting engagement closed. Invoice paid: $${e}.`,'good'); }
+    };
+  }
+
+  // Base actions always in pool
+  const base = [
+    {
+      id: 'work_extra', title: 'PICK UP EXTRA SHIFTS',
+      desc: '+$150 cash, +2 Hustle',
+      fn: () => { G.cash+=150; gainStat('hustle',2); log('Extra shifts completed. The additional pay is in your account.','good'); }
+    },
+    {
+      id: 'freelance', title: 'FREELANCE WORK',
+      desc: `+$${Math.floor(intel*4)} cash (scales with Intel)`,
+      fn: () => { const e=Math.floor(intel*4); G.cash+=e; gainStat('hustle',1); log(`Freelance work completed. Payment received: $${e}.`,'good'); }
+    },
+    oddTask(),
+    {
+      id: 'hustle_side', title: 'STREET HUSTLE',
+      desc: '+$80–$200 cash. Risk of loss.',
+      fn: () => {
+        if(Math.random()<0.15){ const l=Math.floor(Math.random()*80)+20; G.cash-=l; log(`The arrangement fell apart. Lost $${l}.`,'bad'); }
+        else { const e=Math.floor(Math.random()*120)+80; G.cash+=e; gainStat('hustle',1); log(`Quick transaction completed. Earned $${e} in cash.`,'good'); }
+      }
+    },
+    {
+      id: 'invest_menu', title: 'OPEN INVESTMENTS',
+      desc: 'Deposit, withdraw, manage portfolio.',
+      noConsume: true,
+      fn: () => openInvest()
+    },
+  ];
+
+  // Skill-train actions (allowedPerWeek: how many times they can appear per week)
+  // They appear 1–2 times randomly in the shuffled pool selection
+  const skillTrains = [
+    {
+      id: 'study', title: 'HIT THE BOOKS',
+      desc: '+3 Intelligence', cost: 20, allowedPerWeek: 1,
+      fn: () => { if(!spend(20))return; gainStat('intel',3); log('Study session completed. Intelligence increased.','info'); }
+    },
+    {
+      id: 'network', title: 'NETWORKING EVENT',
+      desc: '+3 Charisma, +1 Luck', cost: 30, allowedPerWeek: 1,
+      fn: () => { if(!spend(30))return; gainStat('charm',3); gainStat('luck',1); log('Attended the networking event. Several useful contacts made.','info'); }
+    },
+    {
+      id: 'gym', title: 'HIT THE GYM',
+      desc: '+2 Hustle, +1 Charisma', cost: 15, allowedPerWeek: 2,
+      fn: () => { if(!spend(15))return; gainStat('hustle',2); gainStat('charm',1); log('Training session completed. Discipline and appearance improved.','event'); }
+    },
+    {
+      id: 'online_course', title: 'ONLINE COURSE',
+      desc: '+5 Intelligence', cost: 80, allowedPerWeek: 1,
+      fn: () => { if(!spend(80))return; gainStat('intel',5); log('Course completed. Certificate obtained.','info'); }
+    },
+    {
+      id: 'public_speaking', title: 'PUBLIC SPEAKING CLASS',
+      desc: '+4 Charisma', cost: 50, allowedPerWeek: 1,
+      fn: () => { if(!spend(50))return; gainStat('charm',4); log('Presentation class attended. Confidence in front of an audience has improved.','info'); }
+    },
+    {
+      id: 'mentorship', title: 'FIND A MENTOR',
+      desc: '+2 Intel, +2 Hustle, +1 Luck', cost: 0, allowedPerWeek: 1,
+      fn: () => { gainStat('intel',2); gainStat('hustle',2); gainStat('luck',1); log('Mentorship session completed. Practical guidance received.','info'); }
+    },
+    {
+      id: 'rest', title: 'REST & RECOVER',
+      desc: '+1 to all stats', cost: 0, allowedPerWeek: 2,
+      fn: () => { gainStat('hustle',1);gainStat('intel',1);gainStat('charm',1);gainStat('luck',1); log('Rest day taken. Recovery complete.','week'); }
+    },
+    {
+      id: 'read_finance', title: 'READ FINANCE BOOKS',
+      desc: '+3 Intel, +1 Luck (free)', cost: 0, allowedPerWeek: 1,
+      fn: () => { gainStat('intel',3); gainStat('luck',1); log('Financial literature studied. Concepts are becoming clearer.','info'); }
+    },
+  ];
+
+  // Founder-only expanded actions (change #1: more actions as founder)
+  const founderActions = G.isFounder ? [
+    {
+      id: 'hire_staff', title: 'HIRE A TEAM MEMBER',
+      desc: '+4 Hustle, +3 Charm. -$500.',
+      fn: () => { if(!spend(500))return; gainStat('hustle',4); gainStat('charm',3); log('New team member hired and onboarded.','info'); }
+    },
+    {
+      id: 'product_dev', title: 'BUILD THE PRODUCT',
+      desc: '+5 Intel. Builds toward revenue.',
+      fn: () => {
+        gainStat('intel',5);
+        G.founderProgress=(G.founderProgress||0)+1;
+        log('Development sprint completed. Progress logged on the roadmap.','info');
+        if(G.founderProgress>=5){
+          const rev=Math.floor(G.stats.hustle*80)+2000;
+          G.investments['biz']=(G.investments['biz']||0)+rev;
+          log(`Company revenue milestone reached. +${fmt(rev)} added to business portfolio.`,'gold');
+          G.founderProgress=0;
+        }
+      }
+    },
+    {
+      id: 'pitch_investors', title: 'PITCH INVESTORS',
+      desc: 'Charm check. Win funding or lose face.',
+      fn: () => {
+        if(G.stats.charm>=60&&Math.random()<0.55){
+          const f=Math.floor(Math.random()*15000)+5000;
+          G.cash+=f; gainStat('charm',2);
+          log(`Investment round closed. Funds received: $${f}.`,'gold');
+        } else {
+          log(`Pitch did not close. Investors requested more time.`,'bad');
+          gainStat('intel',1);
+        }
+      }
+    },
+    {
+      id: 'negotiate_deal', title: 'NEGOTIATE A CLIENT DEAL',
+      desc: 'Land a contract. Scales with stats.',
+      fn: () => {
+        const val=Math.floor((G.stats.hustle+G.stats.charm)/2*30)+500;
+        G.cash+=val; gainStat('charm',2); gainStat('hustle',1);
+        log(`Contract signed. Revenue received: $${val}.`,'good');
+      }
+    },
+    {
+      id: 'company_strategy', title: 'STRATEGIC PLANNING',
+      desc: '+5 Intel, +2 Luck.',
+      fn: () => { gainStat('intel',5); gainStat('luck',2); log('Strategic planning session completed. Direction clarified.','info'); }
+    },
+    {
+      id: 'press_interview', title: 'DO A PRESS INTERVIEW',
+      desc: '+4 Charisma. Brand awareness.',
+      fn: () => { gainStat('charm',4); log('Interview completed. Brand visibility has increased.','info'); }
+    },
+    {
+      id: 'pivot_model', title: 'PIVOT BUSINESS MODEL',
+      desc: '50/50 risk. Could 2x or cost you.',
+      fn: () => {
+        if(Math.random()<0.5){
+          const g=Math.floor((G.investments['biz']||500)*0.4);
+          G.investments['biz']=(G.investments['biz']||0)+g;
+          gainStat('intel',3);
+          log(`Pivot successful. Business value increased by ${fmt(g)}.`,'gold');
+        } else {
+          const l=Math.floor((G.investments['biz']||500)*0.25);
+          G.investments['biz']=Math.max(0,(G.investments['biz']||0)-l);
+          gainStat('hustle',3);
+          log(`Pivot did not perform as expected. Business value decreased by ${fmt(l)}.`,'bad');
+        }
+      }
+    },
+    {
+      id: 'expand_market', title: 'EXPAND TO NEW MARKET',
+      desc: '+3 all stats. Costs $2,000.',
+      fn: () => {
+        if(!spend(2000))return;
+        gainStat('hustle',3);gainStat('intel',3);gainStat('charm',3);
+        log('Market expansion initiated. Cost absorbed. Results pending.','info');
+      }
+    },
+    {
+      id: 'acquire_talent', title: 'ACQUIRE TOP TALENT',
+      desc: '+5 Hustle, +3 Intel. -$1,200.',
+      fn: () => {
+        if(!spend(1200))return;
+        gainStat('hustle',5); gainStat('intel',3);
+        log('Senior hire completed. Team capability has improved significantly.','info');
+      }
+    },
+    {
+      id: 'brand_campaign', title: 'LAUNCH BRAND CAMPAIGN',
+      desc: '+6 Charisma. -$800.',
+      fn: () => {
+        if(!spend(800))return;
+        gainStat('charm',6);
+        log('Brand campaign launched. Audience reach has expanded.','info');
+      }
+    },
+  ] : [];
+
+  // Big deal every 7 weeks
+  const bigDeal = (G.week % 7 === 0) ? [{
+    id: 'big_deal',
+    title: '★ BIG DEAL OPPORTUNITY',
+    desc: 'Invest any amount → +15% return next week.',
+    isSpecial: true,
+    fn: () => openBigDeal()
+  }] : [];
+
+  // Combine all regular actions
+  const allRegular = [...base, ...skillTrains, ...founderActions, ...bigDeal];
+
+  // Filter by weekly skill use limits
+  const eligible = allRegular.filter(a => {
+    if (!a.allowedPerWeek) return true;
+    return (G.weeklySkillUses[a.id] || 0) < a.allowedPerWeek;
+  });
+
+  // Shuffle and take 5
+  const picked = shuffle([...eligible]).slice(0, 5);
+
+  // Promo action (always shown separately, full-width)
+  const promoAction = {
+    id: 'seek_promo',
+    isPromo: true,
+    fn: () => seekPromotion()
+  };
+
+  return { regular: picked, promo: promoAction };
+}
+
+// ─── CHARACTER CREATION ───────────────────────────────────────────────────────
+let selectedOrigin = null;
+document.querySelectorAll('.origin-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.origin-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedOrigin = card.dataset.origin;
+  });
+});
+
+function startGame() {
+  const name = document.getElementById('name-input').value.trim() || 'Player';
+  if (!selectedOrigin) { alert('Pick an origin first.'); return; }
+  const origin = ORIGINS[selectedOrigin];
+  G = {
+    name, originKey: selectedOrigin,
+    cash: origin.cash,
+    week: 1, age: 22,
+    careerIdx: 0,
+    isFounder: false,
+    founderProgress: 0,
+    stats: { ...origin.stats },
+    investments: {},
+    actionsUsed: [],
+    weeklySkillUses: {},
+    weekActions: null,
+    maxActionsPerWeek: 3,
+    bigDealActive: null,
+    loanActive: null,
+  };
+  document.getElementById('char-screen').classList.add('hidden');
+  log(`--- Week 1 ---`, 'week');
+  log(`Name: ${name}. Origin: ${origin.desc}. Cash: ${fmt(G.cash)}.`, 'info');
+  log(`The city does not care where you start. Only where you finish.`, 'event');
+  G.weekActions = buildActionPool();
+  renderAll();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderAll() {
+  document.getElementById('hud-week').textContent = G.week;
+  document.getElementById('hud-age').textContent = G.age;
+  const cashEl = document.getElementById('hud-cash');
+  cashEl.textContent = fmt(G.cash);
+  cashEl.className = 'money-val money-gold' + (G.cash < 0 ? ' in-debt' : '');
+  const career = currentCareer();
+  document.getElementById('hud-income').textContent = fmt(career.income) + '/wk';
+  document.getElementById('hud-career').textContent = career.title;
+  ['hustle','intel','charm','luck'].forEach(s => {
+    document.getElementById(`stat-${s}`).textContent = Math.floor(G.stats[s]);
+    document.getElementById(`bar-${s}`).style.width = G.stats[s] + '%';
+  });
+  let total = 0;
+  for (const id in G.investments) total += G.investments[id];
+  document.getElementById('hud-invest').textContent = fmt(total);
+  renderActions();
+  renderPortfolio();
+}
+
+function renderActions() {
+  const grid = document.getElementById('actions-grid');
+  grid.innerHTML = '';
+  if (!G.weekActions) return;
+  const { regular, promo } = G.weekActions;
+  const remaining = G.maxActionsPerWeek - G.actionsUsed.length;
+
+  regular.forEach(a => {
+    const used = G.actionsUsed.includes(a.id);
+    const disabled = used || (!a.noConsume && remaining === 0);
+    const btn = document.createElement('button');
+    btn.className = 'action-btn' + (a.isSpecial ? ' special' : '');
+    btn.disabled = disabled;
+    btn.innerHTML = `
+      <div class="btn-title">${a.title}</div>
+      <div class="btn-desc">${a.desc || ''}</div>
+      ${a.cost ? `<div class="btn-cost">-$${a.cost}</div>` : ''}
+      ${a.isSpecial ? `<div class="btn-badge">THIS WEEK</div>` : ''}
+    `;
+    btn.onclick = () => doAction(a);
+    grid.appendChild(btn);
+  });
+
+  // Promotion — full width, always shown
+  const career = currentCareer();
+  const isAtMax = !G.isFounder && G.careerIdx >= CAREERS.length - 1;
+  const nextCareer = !G.isFounder && !isAtMax ? CAREERS[G.careerIdx + 1] : null;
+  const promoUsed = G.actionsUsed.includes('seek_promo');
+  const promoDisabled = promoUsed || remaining === 0;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'action-btn-promo';
+  const btn = document.createElement('button');
+  btn.className = 'action-btn promo-btn';
+  btn.disabled = promoDisabled;
+
+  let promoTitle, promoDesc;
+  if (G.isFounder) {
+    promoTitle = `CAREER: ${career.title.toUpperCase()}`;
+    promoDesc = 'You run your own company. Keep building.';
+  } else if (isAtMax) {
+    promoTitle = `CAREER: ${career.title.toUpperCase()} → NEXT CHAPTER`;
+    promoDesc = 'You\'ve reached the top. Stay or go founder?';
+  } else {
+    promoTitle = `CAREER: ${career.title.toUpperCase()} → ${nextCareer.title.toUpperCase()}`;
+    promoDesc = `Seek promotion to ${nextCareer.title}`;
+  }
+  btn.innerHTML = `<div class="btn-title">${promoTitle}</div><div class="btn-desc">${promoDesc}</div>`;
+  btn.onclick = () => doAction(promo);
+  wrapper.appendChild(btn);
+  grid.appendChild(wrapper);
+
+  document.getElementById('advance-btn').textContent =
+    `▶ ADVANCE TO WEEK ${G.week + 1}  (${remaining} action${remaining !== 1 ? 's' : ''} remaining)`;
+}
+
+function renderPortfolio() {
+  const panel = document.getElementById('portfolio-panel');
+  const list = document.getElementById('portfolio-list');
+  const ids = Object.keys(G.investments).filter(id => G.investments[id] > 0);
+  if (!ids.length) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  list.innerHTML = '';
+  ids.forEach(id => {
+    const inv = INVESTMENTS.find(i => i.id === id);
+    const name = inv ? inv.name : id;
+    const row = document.createElement('div');
+    row.className = 'portfolio-row';
+    row.innerHTML = `
+      <span class="port-name">${name}</span>
+      <span class="port-val">${fmt(G.investments[id])}</span>
+      <button class="port-withdraw" onclick="withdrawInvestment('${id}')">WITHDRAW</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ─── DO ACTION ────────────────────────────────────────────────────────────────
+function doAction(action) {
+  if (!action.noConsume && G.actionsUsed.includes(action.id)) return;
+  if (!action.noConsume && G.actionsUsed.length >= G.maxActionsPerWeek) return;
+  action.fn();
+  if (!action.noConsume) {
+    G.actionsUsed.push(action.id);
+    if (action.allowedPerWeek) {
+      G.weeklySkillUses[action.id] = (G.weeklySkillUses[action.id] || 0) + 1;
+    }
+  }
+  renderAll();
+}
+
+// ─── PROMOTION ────────────────────────────────────────────────────────────────
+function seekPromotion() {
+  if (G.isFounder) { log('You operate your own company. Focus on building.', 'gold'); return; }
+  const isAtMax = G.careerIdx >= CAREERS.length - 1;
+  if (isAtMax) {
+    document.getElementById('founder-modal').classList.remove('hidden');
+    return;
+  }
+  const next = CAREERS[G.careerIdx + 1];
+  const req = next.req;
+  const s = G.stats;
+  const missing = [];
+  if (req.hustle && s.hustle < req.hustle) missing.push(`Hustle ${req.hustle}`);
+  if (req.intel  && s.intel  < req.intel)  missing.push(`Intelligence ${req.intel}`);
+  if (req.charm  && s.charm  < req.charm)  missing.push(`Charisma ${req.charm}`);
+  if (missing.length) {
+    log(`Not qualified for ${next.title}. Still need: ${missing.join(', ')}.`, 'warn');
+  } else {
+    G.careerIdx++;
+    log(`PROMOTED → ${CAREERS[G.careerIdx].title}. Weekly income: ${fmt(CAREERS[G.careerIdx].income)}.`, 'gold');
+    gainStat('luck', 3);
+    G.actionsUsed.push('seek_promo');
+    renderAll();
+  }
+}
+
+function stayAtTop() {
+  document.getElementById('founder-modal').classList.add('hidden');
+  log('You retain your position. Your salary and title remain intact.', 'gold');
+  G.actionsUsed.push('seek_promo');
+  renderAll();
+}
+
+function goFounder() {
+  document.getElementById('founder-modal').classList.add('hidden');
+  G.isFounder = true;
+  G.maxActionsPerWeek = 5;
+  log('Resignation submitted. You are now building your own company.', 'gold');
+  log('As a founder you have 5 actions per week and access to founder-specific actions.', 'info');
+  G.actionsUsed.push('seek_promo');
+  G.weekActions = buildActionPool();
+  renderAll();
+}
+
+// ─── INVESTMENTS ─────────────────────────────────────────────────────────────
+function openInvest() {
+  document.getElementById('invest-modal-title').textContent = 'INVESTMENTS';
+  const list = document.getElementById('invest-list');
+  list.innerHTML = '';
+  INVESTMENTS.forEach(inv => {
+    const canAfford = G.cash >= inv.minCash;
+    const riskLabel = inv.risk === 0 ? 'Safe' : inv.risk < 0.2 ? 'Low risk' : inv.risk < 0.4 ? 'Medium risk' : 'High risk';
+    const row = document.createElement('div');
+    row.className = 'invest-row';
+    row.innerHTML = `
+      <div class="invest-info">
+        <div class="inv-name">${inv.name}</div>
+        <div class="inv-desc">${inv.desc} [${riskLabel}] Min: ${fmt(inv.minCash)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <input class="amount-input" id="amt-${inv.id}" type="number" min="${inv.minCash}" placeholder="${inv.minCash}"/>
+        <button class="inv-btn" ${!canAfford?'disabled':''} onclick="invest('${inv.id}')">INVEST</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+  document.getElementById('invest-modal').classList.remove('hidden');
+}
+
+function invest(id) {
+  const inv = INVESTMENTS.find(i => i.id === id);
+  const el = document.getElementById(`amt-${id}`);
+  const raw = parseFloat(el ? el.value : 0);
+  const amount = isNaN(raw) || raw < inv.minCash ? inv.minCash : Math.floor(raw);
+  if (G.cash < amount) { log(`Need ${fmt(amount)}. You only have ${fmt(G.cash)}.`, 'bad'); return; }
+  G.cash -= amount;
+  G.investments[id] = (G.investments[id] || 0) + amount;
+  log(`Invested ${fmt(amount)} in ${inv.name}.`, 'info');
+  closeInvest();
+  G.actionsUsed.push('invest_menu');
+  renderAll();
+}
+
+function closeInvest() {
+  document.getElementById('invest-modal').classList.add('hidden');
+}
+
+function withdrawInvestment(id) {
+  const val = G.investments[id] || 0;
+  if (!val) { log('Nothing to withdraw.', 'warn'); return; }
+  G.cash += val;
+  delete G.investments[id];
+  const inv = INVESTMENTS.find(i => i.id === id);
+  log(`Funds withdrawn: ${fmt(val)} returned to cash balance.`, 'good');
+  renderAll();
+}
+
+// ─── BIG DEAL ─────────────────────────────────────────────────────────────────
+function openBigDeal() {
+  document.getElementById('invest-modal-title').textContent = '★ BIG DEAL';
+  const list = document.getElementById('invest-list');
+  list.innerHTML = `
+    <div style="padding:12px 0;">
+      <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:10px;">
+        A contact has a locked-in opportunity — guaranteed +15% return on whatever you commit. 
+        The money comes back next week.
+      </p>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:14px;">Min: $500. Max: everything you have.</p>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="amount-input" id="bigdeal-amt" type="number" min="500" placeholder="500" style="width:130px;"/>
+        <button class="inv-btn" onclick="confirmBigDeal()">LOCK IT IN</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('invest-modal').classList.remove('hidden');
+}
+
+function confirmBigDeal() {
+  const raw = parseFloat(document.getElementById('bigdeal-amt').value);
+  const amount = isNaN(raw) || raw < 500 ? 500 : Math.floor(raw);
+  if (G.cash < amount) { log(`Not enough cash for the big deal. Need $${amount}.`, 'bad'); return; }
+  G.cash -= amount;
+  G.bigDealActive = { amount, resolveWeek: G.week + 1 };
+  log(`Big Deal committed: ${fmt(amount)}. Returns next week at +15%.`, 'gold');
+  closeInvest();
+  document.getElementById('invest-modal-title').textContent = 'INVESTMENTS';
+  G.actionsUsed.push('big_deal');
+  renderAll();
+}
+
+// ─── RANDOM EVENTS ────────────────────────────────────────────────────────────
+const RANDOM_EVENTS = [
+  { chance:0.08, fn:()=>{ const b=Math.floor(Math.random()*600)+200; G.cash-=b; log(`Unexpected medical expense: -$${b}.`,'bad'); } },
+  { chance:0.06, fn:()=>{ const b=Math.floor(Math.random()*300)+100; G.cash+=b; log(`Tax refund received: +$${b}.`,'good'); } },
+  { chance:0.05, fn:()=>{ gainStat('hustle',3); log('Valuable advice received from a contact. Hustle improved.','info'); } },
+  { chance:0.05, fn:()=>{ gainStat('luck',4); log('A fortunate encounter. Luck increased.','gold'); } },
+  { chance:0.04, fn:()=>{ G.cash-=400; log('Vehicle repair required: -$400.','bad'); checkBankLoan(); } },
+  { chance:0.04, fn:()=>{ const f=Math.floor(Math.random()*200)+50; G.cash+=f; log(`Unplanned income received: +$${f}.`,'good'); } },
+  { chance:0.03, fn:()=>{ gainStat('intel',4); log('Read material that broadened your perspective. Intelligence increased.','info'); } },
+  { chance:0.03, fn:()=>{ gainStat('charm',4); log('Handled a difficult situation well. Reputation improved.','info'); } },
+];
+
+// ─── ADVANCE WEEK ─────────────────────────────────────────────────────────────
+function advanceWeek() {
+  const career = currentCareer();
+  if (career.income > 0) {
+    G.cash += career.income;
+    log(`Week ${G.week} paycheck: +${fmt(career.income)}`, 'good');
+  }
+
+  // Weekly living expenses — scales with income tier
+  const { min, max } = getLivingExpense();
+  const expense = Math.floor(Math.random() * (max - min + 1)) + min;
+  G.cash -= expense;
+  log(`Living expenses this week: -${fmt(expense)} (rent, food, bills).`, 'bad');
+  checkBankLoan();
+
+  // Loan repayment
+  if (G.loanActive) {
+    const repay = Math.min(G.loanActive.weeklyRepay, G.loanActive.remaining);
+    G.cash -= repay;
+    G.loanActive.remaining -= repay;
+    log(`Bank loan repayment: -${fmt(repay)}. Outstanding: ${fmt(G.loanActive.remaining)}.`, 'warn');
+    if (G.loanActive.remaining <= 0) {
+      G.loanActive = null;
+      log('Bank loan fully repaid.', 'info');
+    }
+    checkBankLoan(); // in case repayment itself pushed below -15k
+  }
+
+  // Resolve big deal
+  if (G.bigDealActive && G.week >= G.bigDealActive.resolveWeek) {
+    const profit = Math.floor(G.bigDealActive.amount * 1.15);
+    G.cash += profit;
+    log(`BIG DEAL RETURNED: ${fmt(profit)} (+15% on ${fmt(G.bigDealActive.amount)}).`, 'gold');
+    G.bigDealActive = null;
+  }
+
+  // Process investments
+  for (const id in G.investments) {
+    const inv = INVESTMENTS.find(i => i.id === id);
+    if (!inv) continue;
+    let ret = inv.weeklyRate;
+    if (id === 'biz') ret = G.isFounder ? (G.stats.hustle/100)*0.08 : (G.stats.hustle/100)*0.05;
+    if (inv.risk > 0) {
+      if (Math.random() < inv.risk * 0.3) { ret = -(Math.random() * Math.abs(inv.weeklyRate || 0.02) * 2); }
+      else { ret += (Math.random()-0.5) * inv.risk * 0.5; }
+    }
+    const change = G.investments[id] * ret;
+    G.investments[id] = Math.max(0, G.investments[id] + change);
+    if (Math.abs(change) > 5) {
+      log(`${inv.name}: ${change>=0?'▲':'▼'} ${fmt(Math.abs(change))} → ${fmt(G.investments[id])}`, change>=0?'good':'bad');
+    }
+  }
+
+  // Random event
+  for (const evt of RANDOM_EVENTS) {
+    if (Math.random() < evt.chance) { evt.fn(); break; }
+  }
+
+  // Passive luck decay
+  G.stats.luck = Math.max(10, G.stats.luck - 0.5);
+
+  G.week++;
+  if (G.week % 52 === 0) { G.age++; log(`— Age ${G.age}. Another year has passed. —`, 'week'); }
+
+  // Reset weekly state, build new random action set
+  G.actionsUsed = [];
+  G.weeklySkillUses = {};
+  G.weekActions = buildActionPool();
+
+  log(`--- Week ${G.week} ---`, 'week');
+  log(`Cash on hand: ${fmt(G.cash)}`, 'info');
+  if (G.week % 7 === 0) log(`★ A Big Deal opportunity is available this week.`, 'gold');
+
+  renderAll();
+}
+</script>
+</body>
+</html>
