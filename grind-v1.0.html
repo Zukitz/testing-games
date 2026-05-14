@@ -330,7 +330,7 @@ function buildActionPool() {
   function oddTask() {
     if (intel < 35) return {
       id: 'odd_task', title: 'PICK UP ODD JOBS',
-      desc: 'Manual work. +$80–180 cash, +1 Hustle.',
+      desc: 'Manual work. +$85–180 cash, +1 Hustle.',
       fn: () => { const e=Math.floor(Math.random()*100)+80; G.cash+=e; gainStat('hustle',1); log(`Manual work completed. Earned $${e}. Physically demanding but paid.`,'good'); }
     };
     if (intel < 65) return {
