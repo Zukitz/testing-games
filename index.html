@@ -113,10 +113,13 @@
   .money-val.in-debt { color: var(--danger) !important; }
   #restart-btn { background: transparent; border: 1px solid var(--danger); color: var(--danger); font-family: 'Space Mono', monospace; font-size: 11px; padding: 7px 16px; border-radius: 3px; cursor: pointer; letter-spacing: 0.1em; }
   #restart-btn:hover { background: var(--danger); color: #0a0a0a; }
+  #save-indicator { position: fixed; bottom: 12px; right: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 5px 12px; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.1em; z-index: 200; transition: color 0.3s; pointer-events: none; }
+  #save-indicator.saved { color: var(--success); border-color: var(--success); }
+  #save-indicator.error { color: var(--danger); border-color: var(--danger); }
 </style>
 </head>
 <body>
-
+<div id="save-indicator">● SAVE</div>
 <!-- CHARACTER CREATION -->
 <div id="char-screen">
   <div class="char-box">
@@ -292,6 +295,7 @@ function confirmRestart() {
   document.querySelectorAll('.origin-card').forEach(c => c.classList.remove('selected'));
   selectedOrigin = null;
   G = {};
+  deleteSave();
   document.getElementById('char-screen').classList.remove('hidden');
 }
 function gainStat(stat, amount) {
@@ -554,7 +558,44 @@ document.querySelectorAll('.origin-card').forEach(card => {
     selectedOrigin = card.dataset.origin;
   });
 });
+// ─── SAVE / LOAD ──────────────────────────────────────────────────────────────
+const SAVE_KEY = 'grind_save_v1';
 
+function saveGame() {
+  const indicator = document.getElementById('save-indicator');
+  try {
+    const toSave = { ...G, weekActions: null };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
+    if (indicator) {
+      indicator.textContent = '● SAVED';
+      indicator.className = 'saved';
+      setTimeout(() => { indicator.textContent = '● SAVE'; indicator.className = ''; }, 2000);
+    }
+  } catch(e) {
+    if (indicator) { indicator.textContent = '● SAVE FAILED'; indicator.className = 'error'; }
+  }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (!saved || !saved.name || !saved.week) return false;
+    G = saved;
+    G.loanActive = G.loanActive || null;
+    G.bigDealActive = G.bigDealActive || null;
+    G.weeklySkillUses = G.weeklySkillUses || {};
+    G.actionsUsed = G.actionsUsed || [];
+    G.founderProgress = G.founderProgress || 0;
+    G.weekActions = buildActionPool();
+    return true;
+  } catch(e) { return false; }
+}
+
+function deleteSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+}
 function startGame() {
   const name = document.getElementById('name-input').value.trim() || 'Player';
   if (!selectedOrigin) { alert('Pick an origin first.'); return; }
@@ -580,6 +621,7 @@ function startGame() {
   log(`Name: ${name}. Origin: ${origin.desc}. Cash: ${fmt(G.cash)}.`, 'info');
   log(`The city does not care where you start. Only where you finish.`, 'event');
   G.weekActions = buildActionPool();
+  saveGame();
   renderAll();
 }
 
@@ -692,6 +734,7 @@ function doAction(action) {
     }
   }
   renderAll();
+  saveGame();
 }
 
 // ─── PROMOTION ────────────────────────────────────────────────────────────────
@@ -908,9 +951,16 @@ function advanceWeek() {
   log(`--- Week ${G.week} ---`, 'week');
   log(`Cash on hand: ${fmt(G.cash)}`, 'info');
   if (G.week % 7 === 0) log(`★ A Big Deal opportunity is available this week.`, 'gold');
-
+  saveGame(); 
   renderAll();
 }
+(function init() {
+  if (loadGame()) {
+    document.getElementById('char-screen').classList.add('hidden');
+    log(`— Game resumed. Week ${G.week}, Age ${G.age}. —`, 'week');
+    renderAll();
+  }
+})();
 </script>
 <script src="https://pl29443094.profitablecpmratenetwork.com/4b/86/6c/4b866ce51815894b127ea8a49318969b.js"></script> 
 </body>
